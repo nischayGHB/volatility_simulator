@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Volatility Modeling: An Interactive Exploration</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-start: #02040a;
+            --bg-end: #0d1117;
+            --card-bg: rgba(22, 27, 34, 0.7);
+            --border-color: rgba(255, 255, 255, 0.1);
+            --accent-color: #22d3ee;
+            --text-primary: #e6edf3;
+            --text-secondary: #9ca3af;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: var(--bg-end);
+            color: var(--text-primary);
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+        
+        .main-background {
+            background-image: radial-gradient(circle at top, var(--bg-start), var(--bg-end) 60%);
+        }
+
+        .animated-gradient-text {
+            background-image: linear-gradient(90deg, #5eead4, var(--accent-color), #a5b4fc);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .fade-in {
+            animation: fadeIn 0.8s ease-out forwards;
+        }
+
+        .tab-button {
+            transition: color 0.3s ease;
+            position: relative;
+        }
+        .tab-button::after {
+            content: '';
+            position: absolute;
+            bottom: -2px;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background-color: var(--accent-color);
+            transform: scaleX(0);
+            transition: transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        }
+        .tab-button.active {
+            color: var(--accent-color);
+        }
+        .tab-button.active::after {
+            transform: scaleX(1);
+        }
+
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+            animation: fadeIn 0.6s ease-out;
+        }
+        
+        details > summary {
+            list-style: none;
+        }
+        details > summary::-webkit-details-marker {
+            display: none;
+        }
+        .accordion-icon {
+            transition: transform 0.3s ease;
+        }
+        details[open] .accordion-icon {
+            transform: rotate(180deg);
+        }
+    </style>
+</head>
+<body class="main-background overflow-x-hidden">
+
+    <!-- Header -->
+    <header class="sticky top-0 z-50 backdrop-blur-xl border-b border-white/10">
+        <div class="container mx-auto px-6 py-4 flex justify-between items-center">
+            <a href="#" class="flex items-center gap-3">
+                 <svg class="w-6 h-6 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path></svg>
+                 <h1 class="text-xl font-semibold text-white tracking-wide">Volatility Modeler</h1>
+            </a>
+            <a href="#simulators" class="hidden md:inline-block text-sm bg-white/5 hover:bg-white/10 border border-white/10 text-white font-medium py-2 px-5 rounded-full transition-all duration-300">
+                Launch Simulators
+            </a>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="container mx-auto px-6 pt-24 pb-32">
+
+        <!-- Hero Section -->
+        <section class="text-center py-16">
+            <div class="fade-in" style="animation-delay: 0.1s;">
+                <h2 class="text-5xl md:text-6xl lg:text-7xl font-bold text-white tracking-tighter leading-tight">
+                    Deconstructing Market <br class="hidden md:block" /> <span class="animated-gradient-text">Uncertainty</span>
+                </h2>
+            </div>
+            <p class="mt-8 max-w-3xl mx-auto text-lg text-slate-400 leading-relaxed fade-in" style="animation-delay: 0.3s;">
+                An executive briefing and interactive laboratory for exploring the models that define modern quantitative finance. Go beyond theory and engage directly with the mechanics of risk.
+            </p>
+        </section>
+
+        <!-- Model Explorer Section -->
+        <section id="simulators" class="pt-24">
+            <div class="text-center mb-16 fade-in">
+                 <h3 class="text-4xl font-bold text-white tracking-tight">Interactive Model Laboratory</h3>
+                 <p class="mt-4 max-w-3xl mx-auto text-slate-400">
+                    Select a model to explore its core principles and launch the live simulator.
+                 </p>
+            </div>
+
+            <!-- Tab Navigation -->
+            <div class="flex justify-center border-b-2 border-white/10 mb-12 fade-in">
+                <button data-tab="gbm" class="tab-button py-4 px-8 font-semibold text-lg active">GBM</button>
+                <button data-tab="pjd" class="tab-button py-4 px-8 font-semibold text-lg">PJD</button>
+                <button data-tab="garch" class="tab-button py-4 px-8 font-semibold text-lg">GARCH</button>
+            </div>
+
+            <!-- Tab Content Area -->
+            <div>
+                <!-- GBM Tab -->
+                <div id="gbm-tab" class="tab-content active">
+                    <div class="grid lg:grid-cols-12 gap-8 lg:gap-12">
+                        <!-- Left Info Column -->
+                        <div class="lg:col-span-5 space-y-4">
+                            <h4 class="text-3xl font-bold text-white mb-4">Geometric Brownian Motion</h4>
+                            <div class="space-y-3 text-slate-300">
+                                <details class="bg-white/5 p-4 rounded-lg border border-white/10">
+                                    <summary class="flex justify-between items-center cursor-pointer font-semibold">Why is this important? <svg class="w-5 h-5 accordion-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg></summary>
+                                    <p class="mt-3 text-slate-400 text-sm leading-relaxed">GBM is the bedrock of modern finance. It's the engine inside the Nobel Prize-winning Black-Scholes-Merton option pricing model. Understanding it is fundamental to understanding how derivatives are valued.</p>
+                                </details>
+                                <details class="bg-white/5 p-4 rounded-lg border border-white/10">
+                                    <summary class="flex justify-between items-center cursor-pointer font-semibold">What's the core insight? <svg class="w-5 h-5 accordion-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg></summary>
+                                    <p class="mt-3 text-slate-400 text-sm leading-relaxed">It models asset prices as a continuous random walk where returns, not prices, are normally distributed. This ensures prices can't go negative and that the volatility of returns is constant over time.</p>
+                                </details>
+                                <details class="bg-white/5 p-4 rounded-lg border border-white/10">
+                                    <summary class="flex justify-between items-center cursor-pointer font-semibold">Is it always true? <svg class="w-5 h-5 accordion-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg></summary>
+                                    <p class="mt-3 text-slate-400 text-sm leading-relaxed">No. Its biggest weakness is the assumption of constant volatility and normal returns. Real-world markets exhibit "fat tails" (extreme events are more common) and volatility clustering, which GBM ignores. Ignoring this leads to systematically underpricing risk.</p>
+                                </details>
+                                <details class="bg-white/5 p-4 rounded-lg border border-white/10">
+                                    <summary class="flex justify-between items-center cursor-pointer font-semibold">What's a good analogy? <svg class="w-5 h-5 accordion-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg></summary>
+                                    <p class="mt-3 text-slate-400 text-sm leading-relaxed">Imagine a leaf floating down a river. It has a general downward direction (the drift, μ) but is constantly jostled by random, small eddies in the water (the volatility, σ). The path is erratic but unbroken.</p>
+                                </details>
+                            </div>
+                        </div>
+                        <!-- Right Simulator Column -->
+                        <div class="lg:col-span-7 rounded-xl bg-[var(--card-bg)] border border-white/10 shadow-2xl shadow-black/20 overflow-hidden min-h-[90vh]">
+                            <iframe src="./gbm_simulator.html" class="w-full h-full border-0"></iframe>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- PJD Tab -->
+                <div id="pjd-tab" class="tab-content">
+                    <div class="grid lg:grid-cols-12 gap-8 lg:gap-12">
+                        <!-- Left Info Column -->
+                        <div class="lg:col-span-5 space-y-4">
+                            <h4 class="text-3xl font-bold text-white mb-4">Poisson Jump-Diffusion</h4>
+                             <div class="space-y-3 text-slate-300">
+                                <details class="bg-white/5 p-4 rounded-lg border border-white/10">
+                                    <summary class="flex justify-between items-center cursor-pointer font-semibold">Why is this important? <svg class="w-5 h-5 accordion-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg></summary>
+                                    <p class="mt-3 text-slate-400 text-sm leading-relaxed">Markets don't always move smoothly. PJD provides a more realistic model by adding sudden, discontinuous "jumps" to GBM. This accounts for overnight news, earnings surprises, or geopolitical shocks that cause instant price gaps.</p>
+                                </details>
+                                <details class="bg-white/5 p-4 rounded-lg border border-white/10">
+                                    <summary class="flex justify-between items-center cursor-pointer font-semibold">How does it work? <svg class="w-5 h-5 accordion-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg></summary>
+                                    <p class="mt-3 text-slate-400 text-sm leading-relaxed">It combines the standard GBM process with a Poisson process. The Poisson process determines *when* a jump occurs (with intensity λ), while a separate random variable (often Normal) determines the *size* of that jump. Most of the time the price follows GBM, but occasionally it jumps.</p>
+                                </details>
+                                <details class="bg-white/5 p-4 rounded-lg border border-white/10">
+                                    <summary class="flex justify-between items-center cursor-pointer font-semibold">What's the difference? <svg class="w-5 h-5 accordion-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg></summary>
+                                    <p class="mt-3 text-slate-400 text-sm leading-relaxed">GBM vs. PJD is continuity vs. discontinuity. A GBM path can be drawn without lifting your pen. A PJD path has sudden breaks. This seemingly small difference has a huge impact on pricing options, especially short-term, out-of-the-money options which are highly sensitive to sudden large moves.</p>
+                                </details>
+                                <details class="bg-white/5 p-4 rounded-lg border border-white/10">
+                                    <summary class="flex justify-between items-center cursor-pointer font-semibold">What's a good analogy? <svg class="w-5 h-5 accordion-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg></summary>
+                                    <p class="mt-3 text-slate-400 text-sm leading-relaxed">Imagine walking down a path on a calm day (GBM). Suddenly, a strong gust of wind picks you up and drops you 10 feet ahead (the jump). You then resume walking from your new position. The wind gusts are infrequent but have a significant impact when they happen.</p>
+                                </details>
+                            </div>
+                        </div>
+                        <!-- Right Simulator Column -->
+                        <div class="lg:col-span-7 rounded-xl bg-[var(--card-bg)] border border-white/10 shadow-2xl shadow-black/20 overflow-hidden min-h-[90vh]">
+                            <iframe src="./pjd_simulator.html" class="w-full h-full border-0"></iframe>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- GARCH Tab -->
+                <div id="garch-tab" class="tab-content">
+                    <div class="grid lg:grid-cols-12 gap-8 lg:gap-12">
+                        <!-- Left Info Column -->
+                        <div class="lg:col-span-5 space-y-4">
+                            <h4 class="text-3xl font-bold text-white mb-4">GARCH(1,1)</h4>
+                             <div class="space-y-3 text-slate-300">
+                                <details class="bg-white/5 p-4 rounded-lg border border-white/10">
+                                    <summary class="flex justify-between items-center cursor-pointer font-semibold">Why is this important? <svg class="w-5 h-5 accordion-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg></summary>
+                                    <p class="mt-3 text-slate-400 text-sm leading-relaxed">GARCH is the workhorse for volatility forecasting. It directly addresses GBM's critical flaw by making volatility dynamic. It captures "volatility clustering"—the observation that calm periods and turbulent periods tend to group together in markets.</p>
+                                </details>
+                                <details class="bg-white/5 p-4 rounded-lg border border-white/10">
+                                    <summary class="flex justify-between items-center cursor-pointer font-semibold">How does it work? <svg class="w-5 h-5 accordion-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg></summary>
+                                    <p class="mt-3 text-slate-400 text-sm leading-relaxed">It models tomorrow's variance as a weighted average of three things: a long-term average variance, yesterday's squared "shock" (the unexpected part of the return), and yesterday's variance. In essence, it has memory. A big shock yesterday will increase the model's expectation of volatility for today.</p>
+                                </details>
+                                <details class="bg-white/5 p-4 rounded-lg border border-white/10">
+                                    <summary class="flex justify-between items-center cursor-pointer font-semibold">Does this apply to me? <svg class="w-5 h-5 accordion-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg></summary>
+                                    <p class="mt-3 text-slate-400 text-sm leading-relaxed">Absolutely, if you are involved in risk management. GARCH models are central to calculating metrics like Value-at-Risk (VaR). For traders, GARCH forecasts can inform strategy, for example, by adjusting position sizes based on expected volatility.</p>
+                                </details>
+                                <details class="bg-white/5 p-4 rounded-lg border border-white/10">
+                                    <summary class="flex justify-between items-center cursor-pointer font-semibold">Can you feel it intuitively? <svg class="w-5 h-5 accordion-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg></summary>
+                                    <p class="mt-3 text-slate-400 text-sm leading-relaxed">Think of market "mood." After a major crash (a big shock), everyone is on edge, and prices swing wildly for several days. That's high volatility persisting. After a long, quiet period, it often takes another large shock to "wake up" the market. GARCH formalizes this sense of persistent market mood.</p>
+                                </details>
+                            </div>
+                        </div>
+                        <!-- Right Simulator Column -->
+                        <div class="lg:col-span-7 rounded-xl bg-[var(--card-bg)] border border-white/10 shadow-2xl shadow-black/20 overflow-hidden min-h-[90vh]">
+                            <iframe src="./garch_simulator.html" class="w-full h-full border-0"></iframe>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="border-t border-white/10 mt-24">
+        <div class="container mx-auto px-6 py-8 text-center text-slate-500">
+            <p>© 2024 Volatility Modeler. All simulations are for educational and illustrative purposes only.</p>
+            <p class="text-sm mt-2">A premium interactive learning experience inspired by MIT OpenCourseWare.</p>
+        </div>
+    </footer>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const tabButtons = document.querySelectorAll('.tab-button');
+            const tabContents = document.querySelectorAll('.tab-content');
+
+            tabButtons.forEach(button => {
+                button.addEventListener('click', () => {
+                    const tabId = button.getAttribute('data-tab');
+
+                    tabButtons.forEach(btn => btn.classList.remove('active'));
+                    button.classList.add('active');
+
+                    tabContents.forEach(content => {
+                        content.classList.toggle('active', content.id === `${tabId}-tab`);
+                    });
+                });
+            });
+        });
+    </script>
+</body>
+</html>

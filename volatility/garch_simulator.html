@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GARCH(1,1) Volatility Simulation</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+        .param-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 1.5rem; 
+        }
+        .input-group { display: flex; flex-direction: column; }
+        .input-group label { margin-bottom: 0.5rem; font-weight: 500; color: #cbd5e1; }
+        .input-group input {
+            background-color: #1e293b; border: 1px solid #334155; color: #e2e8f0; 
+            padding: 0.875rem 1rem; border-radius: 0.5rem; 
+            transition: border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+            appearance: none; 
+        }
+        .input-group input:focus {
+            outline: none; border-color: #fb923c; 
+            box-shadow: 0 0 0 3px rgba(251, 146, 60, 0.3);
+        }
+        .chart-container {
+            position: relative; height: 45vh; width: 100%;
+            background-color: #0f172a; border-radius: 0.75rem; 
+            padding: 1.5rem; 
+            box-shadow: 0 10px 15px -3px rgba(0,0,0,0.3), 0 4px 6px -2px rgba(0,0,0,0.2);
+        }
+        #simulationStatus { min-height: 28px; font-size: 1.05em; }
+        .analytics-box {
+            background: #1e293b; border-left: 4px solid #fb923c;
+            padding: 1rem 1.5rem; border-radius: 0.5rem;
+        }
+        .analytics-label { color: #94a3b8; font-size: 0.9rem; }
+        .analytics-value { color: #f8fafc; font-size: 1.25rem; font-weight: 600; }
+        .warning-text { color: #f87171; }
+    </style>
+</head>
+<body class="bg-slate-900 text-slate-200 p-4 md:p-8 selection:bg-orange-500 selection:text-white">
+    <div class="container mx-auto max-w-7xl bg-slate-800 p-6 md:p-10 rounded-xl shadow-2xl">
+        <header class="mb-8 text-center">
+            <h1 class="text-4xl md:text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-amber-500 pb-2">
+                GARCH(1,1) Simulation
+            </h1>
+            <p class="text-slate-400 mt-3 text-lg">Visualizing Volatility Clustering: σ²<sub class="text-sm">t</sub> = α<sub class="text-sm">0</sub> + α<sub class="text-sm">1</sub>ε²<sub class="text-sm">t-1</sub> + β<sub class="text-sm">1</sub>σ²<sub class="text-sm">t-1</sub></p>
+        </header>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
+            <div class="lg:col-span-2 p-8 bg-slate-700/50 border border-slate-700 rounded-xl shadow-lg">
+                <h2 class="text-2xl font-semibold text-orange-400 mb-6">Model Parameters</h2>
+                <div class="param-grid">
+                    <div class="input-group"><label for="s0">Initial Price (S₀):</label><input type="number" id="s0" value="100" step="1"></div>
+                    <div class="input-group"><label for="mu">Mean Return (μ, per step):</label><input type="number" id="mu" value="0.0003" step="0.0001"></div>
+                    <div class="input-group"><label for="alpha0">α₀ (Constant):</label><input type="number" id="alpha0" value="0.00001" step="0.000001" min="0"></div>
+                    <div class="input-group"><label for="alpha1">α₁ (ARCH term):</label><input type="number" id="alpha1" value="0.10" step="0.01" min="0"></div>
+                    <div class="input-group"><label for="beta1">β₁ (GARCH term):</label><input type="number" id="beta1" value="0.85" step="0.01" min="0"></div>
+                    <div class="input-group"><label for="n_steps">Time Steps (Days):</label><input type="number" id="n_steps" value="504" step="1"></div>
+                </div>
+            </div>
+            <div class="p-8 bg-slate-700/50 border border-slate-700 rounded-xl shadow-lg flex flex-col justify-center">
+                 <h2 class="text-2xl font-semibold text-orange-400 mb-6">Model Analytics</h2>
+                 <div class="space-y-6">
+                    <div class="analytics-box">
+                        <div class="analytics-label">Long-Run Daily Volatility (σ*)</div>
+                        <div id="longRunVol" class="analytics-value">--%</div>
+                    </div>
+                    <div class="analytics-box">
+                        <div class="analytics-label">Stationarity (α₁ + β₁)</div>
+                        <div id="stationarity" class="analytics-value">--</div>
+                    </div>
+                 </div>
+            </div>
+        </div>
+
+        <div class="mb-8 text-center">
+            <button id="startSimulationBtn"
+                    class="bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-600 hover:to-amber-700 text-white font-semibold py-3 px-10 rounded-lg shadow-lg hover:shadow-orange-500/30 transition-all duration-300 ease-in-out transform hover:scale-105 focus:outline-none focus:ring-4 focus:ring-orange-300">
+                Run Simulation
+            </button>
+        </div>
+
+        <div id="simulationStatus" class="text-center text-orange-400 font-medium mb-6"></div>
+        
+        <div class="grid grid-cols-1 gap-8">
+            <div class="chart-container">
+                <h3 class="text-slate-300 font-semibold mb-2 text-center text-lg">Simulated Asset Price Path</h3>
+                <canvas id="priceChart"></canvas>
+            </div>
+            <div class="chart-container">
+                <h3 class="text-slate-300 font-semibold mb-2 text-center text-lg">Conditional Volatility (σ<sub>t</sub>)</h3>
+                <canvas id="volatilityChart"></canvas>
+            </div>
+        </div>
+
+        <footer class="text-center text-sm text-slate-500 mt-12">
+            <p>© 2024 Advanced Financial Modeling Interface. GARCH(1,1) model demonstrates volatility clustering and mean reversion.</p>
+        </footer>
+    </div>
+
+    <script>
+        const s0Input = document.getElementById('s0');
+        const muInput = document.getElementById('mu');
+        const alpha0Input = document.getElementById('alpha0');
+        const alpha1Input = document.getElementById('alpha1');
+        const beta1Input = document.getElementById('beta1');
+        const nStepsInput = document.getElementById('n_steps');
+        
+        const startSimulationBtn = document.getElementById('startSimulationBtn');
+        const simulationStatus = document.getElementById('simulationStatus');
+
+        const longRunVolEl = document.getElementById('longRunVol');
+        const stationarityEl = document.getElementById('stationarity');
+
+        const priceCtx = document.getElementById('priceChart').getContext('2d');
+        const volCtx = document.getElementById('volatilityChart').getContext('2d');
+        let priceChart, volatilityChart;
+        let animationFrameId;
+
+        // Standard Normal variate using Box-Muller transform
+        function randomNormal() {
+            let u = 0, v = 0;
+            while (u === 0) u = Math.random();
+            while (v === 0) v = Math.random();
+            return Math.sqrt(-2.0 * Math.log(u)) * Math.cos(2.0 * Math.PI * v);
+        }
+
+        function garchSimulation(S0, mu, alpha0, alpha1, beta1, n_steps) {
+            // Initialize arrays
+            const prices = new Array(n_steps + 1);
+            const volatilities = new Array(n_steps + 1);
+            const returns = new Array(n_steps + 1).fill(0);
+            const errors_sq = new Array(n_steps + 1).fill(0);
+            const variance = new Array(n_steps + 1);
+
+            prices[0] = S0;
+
+            // Initial variance: use the long-run average variance if stationary
+            const stationaritySum = alpha1 + beta1;
+            if (stationaritySum < 1 && stationaritySum >= 0 && alpha0 > 0) {
+                variance[0] = alpha0 / (1 - stationaritySum);
+            } else {
+                // Fallback for non-stationary or invalid params: use a reasonable guess
+                variance[0] = alpha0 / (1 - 0.95); // Assuming a typical persistence
+            }
+            volatilities[0] = Math.sqrt(variance[0]);
+            errors_sq[0] = variance[0]; // Initialize previous error with unconditional variance
+
+            // Simulation loop
+            for (let t = 1; t <= n_steps; t++) {
+                // 1. Calculate current variance from previous values
+                variance[t] = alpha0 + alpha1 * errors_sq[t-1] + beta1 * variance[t-1];
+                volatilities[t] = Math.sqrt(variance[t]);
+
+                // 2. Generate current shock
+                const Z = randomNormal();
+                const error = volatilities[t] * Z;
+
+                // 3. Calculate return and new price
+                returns[t] = mu + error;
+                prices[t] = prices[t-1] * Math.exp(returns[t]);
+                
+                // 4. Store squared error for next iteration
+                errors_sq[t] = error * error;
+            }
+            return { prices, volatilities };
+        }
+        
+        function createChart(ctx, label, color, yCallback) {
+            return new Chart(ctx, {
+                type: 'line',
+                data: { labels: [], datasets: [{
+                    label: label,
+                    data: [],
+                    borderColor: color,
+                    backgroundColor: 'transparent',
+                    borderWidth: 2,
+                    tension: 0.1,
+                    pointRadius: 0
+                }] },
+                options: {
+                    responsive: true, maintainAspectRatio: false, animation: false,
+                    scales: {
+                        x: { title: { display: true, text: 'Time (Steps)', color: '#94a3b8' }, ticks: { color: '#64748b' }, grid: { display: false } },
+                        y: { title: { display: true, text: label, color: '#94a3b8' }, ticks: { color: '#64748b', callback: yCallback }, grid: { color: '#1e293b' } }
+                    },
+                    plugins: { legend: { display: false }, tooltip: {
+                        enabled: true, mode: 'index', intersect: false,
+                        callbacks: { label: (context) => `${context.dataset.label}: ${yCallback(context.parsed.y)}` }
+                    }}
+                }
+            });
+        }
+
+        function initializeCharts() {
+            if (priceChart) priceChart.destroy();
+            if (volatilityChart) volatilityChart.destroy();
+
+            priceChart = createChart(priceCtx, 'Price', '#22d3ee', (val) => '$' + val.toFixed(2));
+            volatilityChart = createChart(volCtx, 'Daily Volatility', '#fb923c', (val) => (val * 100).toFixed(3) + '%');
+        }
+
+        function animateCharts(paths, n_steps) {
+            if (animationFrameId) cancelAnimationFrame(animationFrameId);
+            
+            const { prices, volatilities } = paths;
+            const timeLabels = Array.from({ length: n_steps + 1 }, (_, i) => i);
+            
+            priceChart.data.labels = [];
+            priceChart.data.datasets[0].data = [];
+            volatilityChart.data.labels = [];
+            volatilityChart.data.datasets[0].data = [];
+            priceChart.update();
+            volatilityChart.update();
+            
+            let currentStep = 0;
+            function drawStep() {
+                if (currentStep <= n_steps) {
+                    simulationStatus.textContent = `Simulating... Step ${currentStep} of ${n_steps}`;
+                    
+                    priceChart.data.labels.push(timeLabels[currentStep]);
+                    priceChart.data.datasets[0].data.push(prices[currentStep]);
+                    
+                    volatilityChart.data.labels.push(timeLabels[currentStep]);
+                    volatilityChart.data.datasets[0].data.push(volatilities[currentStep]);
+
+                    // Update charts without re-animation for performance
+                    if (currentStep % 5 === 0 || currentStep === n_steps) {
+                        priceChart.update('none');
+                        volatilityChart.update('none');
+                    }
+                    
+                    currentStep++;
+                    animationFrameId = requestAnimationFrame(drawStep);
+                } else {
+                    simulationStatus.innerHTML = `Simulation Complete! <span class="text-green-400">✓</span>`;
+                    startSimulationBtn.disabled = false;
+                    startSimulationBtn.classList.remove('opacity-70', 'cursor-wait');
+                }
+            }
+            drawStep();
+        }
+
+        function updateAnalytics() {
+            const alpha1 = parseFloat(alpha1Input.value) || 0;
+            const beta1 = parseFloat(beta1Input.value) || 0;
+            const alpha0 = parseFloat(alpha0Input.value) || 0;
+
+            const stationaritySum = alpha1 + beta1;
+            stationarityEl.textContent = stationaritySum.toFixed(4);
+
+            if (stationaritySum < 1 && stationaritySum >= 0 && alpha0 > 0) {
+                const longRunVar = alpha0 / (1 - stationaritySum);
+                const longRunVol = Math.sqrt(longRunVar);
+                longRunVolEl.textContent = (longRunVol * 100).toFixed(3) + '%';
+                stationarityEl.classList.remove('warning-text');
+            } else {
+                longRunVolEl.textContent = "Non-Stationary";
+                stationarityEl.classList.add('warning-text');
+            }
+        }
+
+        startSimulationBtn.addEventListener('click', () => {
+            startSimulationBtn.disabled = true;
+            startSimulationBtn.classList.add('opacity-70', 'cursor-wait');
+
+            const S0 = parseFloat(s0Input.value);
+            const mu = parseFloat(muInput.value);
+            const alpha0 = parseFloat(alpha0Input.value);
+            const alpha1 = parseFloat(alpha1Input.value);
+            const beta1 = parseFloat(beta1Input.value);
+            const n_steps = parseInt(nStepsInput.value);
+
+            // Basic Validation
+            if ([S0, mu, alpha0, alpha1, beta1, n_steps].some(isNaN) || n_steps <= 0 || S0 <= 0) {
+                 simulationStatus.innerHTML = `<span class="text-red-400">Error: Please provide valid, positive numbers for S₀ and Steps.</span>`;
+                 startSimulationBtn.disabled = false;
+                 startSimulationBtn.classList.remove('opacity-70', 'cursor-wait');
+                 return;
+            }
+
+            initializeCharts();
+            
+            setTimeout(() => {
+                const paths = garchSimulation(S0, mu, alpha0, alpha1, beta1, n_steps);
+                animateCharts(paths, n_steps);
+            }, 100);
+        });
+
+        // Add event listeners for live analytics update
+        [alpha0Input, alpha1Input, beta1Input].forEach(input => {
+            input.addEventListener('input', updateAnalytics);
+        });
+
+        // Initial setup
+        document.addEventListener('DOMContentLoaded', () => {
+            initializeCharts();
+            updateAnalytics();
+        });
+    </script>
+</body>
+</html>
